@@ -1,133 +1,87 @@
-// import makeOrdinal from "./makeOrdinal";
-// import isFinite from "./isFinite";
-// import isSafeNumber from "./isSafeNumber";
+enum UserRequestStatus {
+  PENDING = "PENDING",
+  SUCCESS = "SUCCESS",
+  ERROR = "ERROR",
+}
 
-// const TEN: number = 10;
-// const ONE_HUNDRED: number = 100;
-// const ONE_THOUSAND: number = 1000;
-// const ONE_MILLION: number = 1000000;
-// const ONE_BILLION: number = 1000000000; //         1.000.000.000 (9)
-// const ONE_TRILLION: number = 1000000000000; //     1.000.000.000.000 (12)
-// const ONE_QUADRILLION: number = 1000000000000000; // 1.000.000.000.000.000 (15)
-// const MAX: number = 9007199254740992; // 9.007.199.254.740.992 (15)
+enum UserField {
+  ID = "id",
+  FIRST_NAME = "firstName",
+  LAST_NAME = "lastName",
+  AGE = "age",
+  GENDER = "gender",
+}
 
-// const LESS_THAN_TWENTY: readonly string[] = [
-//   "zero",
-//   "one",
-//   "two",
-//   "three",
-//   "four",
-//   "five",
-//   "six",
-//   "seven",
-//   "eight",
-//   "nine",
-//   "ten",
-//   "eleven",
-//   "twelve",
-//   "thirteen",
-//   "fourteen",
-//   "fifteen",
-//   "sixteen",
-//   "seventeen",
-//   "eighteen",
-//   "nineteen",
-// ];
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  age: number;
+  gender: string;
+}
 
-// const TENTHS_LESS_THAN_HUNDRED: readonly string[] = [
-//   "zero",
-//   "ten",
-//   "twenty",
-//   "thirty",
-//   "forty",
-//   "fifty",
-//   "sixty",
-//   "seventy",
-//   "eighty",
-//   "ninety",
-// ];
+interface UsersResponse {
+  users: User[];
+  total: number;
+  skip: number;
+  limit: number;
+}
 
-// /**
-//  * Converts an integer into words.
-//  * If number is decimal, the decimals will be removed.
-//  * @example toWords(12) => 'twelve'
-//  * @param {number|string} number
-//  * @param {boolean} [asOrdinal] - Deprecated, use toWordsOrdinal() instead!
-//  * @returns {string}
-//  */
-// function toWords(number: number | string, asOrdinal?: boolean): string {
-//   let num: number;
+async function fetchAndDisplayUsers(): Promise<void> {
+  const url: string = "https://dummyjson.com/users";
+  let status: UserRequestStatus = UserRequestStatus.PENDING;
 
-//   if (typeof number === "string") {
-//     num = parseInt(number, 10);
-//   } else {
-//     num = number;
-//   }
+  console.log("Отправка запроса на получение пользователей...");
 
-//   if (!isFinite(num)) {
-//     throw new TypeError(
-//       "Not a finite number: " + number + " (" + typeof number + ")",
-//     );
-//   }
-//   if (!isSafeNumber(num)) {
-//     throw new RangeError(
-//       "Input is not a safe number, it’s either too large or too small.",
-//     );
-//   }
-//   const words = generateWords(num);
-//   return asOrdinal ? makeOrdinal(words) : words;
-// }
+  try {
+    const response: Response = await fetch(url);
 
-// function generateWords(number: number, words: string[] = []): string {
-//   let remainder: number = 0;
-//   let word: string = "";
+    if (!response.ok) {
+      status = UserRequestStatus.ERROR;
+      throw new Error(
+        `HTTP error! Status: ${response.status} ${response.statusText}`,
+      );
+    }
 
-//   // We’re done
-//   if (number === 0) {
-//     return !words ? "zero" : words.join(" ").replace(/,$/, "");
-//   }
-//   // First run
-//   if (!words) {
-//     words = [];
-//   }
-//   // If negative, prepend “minus”
-//   if (number < 0) {
-//     words.push("minus");
-//     number = Math.abs(number);
-//   }
+    const data: UsersResponse = await response.json();
+    status = UserRequestStatus.SUCCESS;
 
-//   if (number < 20) {
-//     remainder = 0;
-//     word = LESS_THAN_TWENTY[number] ?? "";
-//   } else if (number < ONE_HUNDRED) {
-//     remainder = number % TEN;
-//     word = TENTHS_LESS_THAN_HUNDRED[Math.floor(number / TEN)] ?? "";
-//     // In case of remainder, we need to handle it here to be able to add the “-”
-//     if (remainder) {
-//       word += "-" + LESS_THAN_TWENTY[remainder];
-//       remainder = 0;
-//     }
-//   } else if (number < ONE_THOUSAND) {
-//     remainder = number % ONE_HUNDRED;
-//     word = generateWords(Math.floor(number / ONE_HUNDRED)) + " hundred";
-//   } else if (number < ONE_MILLION) {
-//     remainder = number % ONE_THOUSAND;
-//     word = generateWords(Math.floor(number / ONE_THOUSAND)) + " thousand,";
-//   } else if (number < ONE_BILLION) {
-//     remainder = number % ONE_MILLION;
-//     word = generateWords(Math.floor(number / ONE_MILLION)) + " million,";
-//   } else if (number < ONE_TRILLION) {
-//     remainder = number % ONE_BILLION;
-//     word = generateWords(Math.floor(number / ONE_BILLION)) + " billion,";
-//   } else if (number < ONE_QUADRILLION) {
-//     remainder = number % ONE_TRILLION;
-//     word = generateWords(Math.floor(number / ONE_TRILLION)) + " trillion,";
-//   } else if (number <= MAX) {
-//     remainder = number % ONE_QUADRILLION;
-//     word =
-//       generateWords(Math.floor(number / ONE_QUADRILLION)) + " quadrillion,";
-//   }
+    console.log(`\n✅ Статус запроса: ${status}`);
+    console.log(`📦 Получено пользователей: ${data.total}`);
+    console.log(`🔎 Пропущено: ${data.skip}, Лимит: ${data.limit}\n`);
 
-//   words.push(word);
-//   return generateWords(remainder, words);
-// }
+    console.log("👥 Список пользователей:");
+    console.log("-".repeat(50));
+
+    data.users.forEach((user: User, index: number) => {
+      console.log(`${index + 1}.`);
+      console.log(`   ${UserField.ID}: ${user.id}`);
+      console.log(`   ${UserField.FIRST_NAME}: ${user.firstName}`);
+      console.log(`   ${UserField.LAST_NAME}: ${user.lastName}`);
+      console.log(`   ${UserField.AGE}: ${user.age}`);
+      console.log(`   ${UserField.GENDER}: ${user.gender}`);
+      console.log("");
+    });
+  } catch (error: unknown) {
+    status = UserRequestStatus.ERROR;
+
+    let errorMessage: string;
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
+
+    console.error(`\n❌ Статус запроса: ${status}`);
+    console.error("❌ Произошла ошибка при получении данных:");
+    console.error(errorMessage);
+  } finally {
+    console.log("\n--- Завершение выполнения функции ---");
+  }
+}
+
+// Вызов функции
+fetchAndDisplayUsers().catch((error) => {
+  console.error("Критическая ошибка в функции fetchAndDisplayUsers:", error);
+});
