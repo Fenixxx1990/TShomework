@@ -1,45 +1,41 @@
-// types.d.ts
+declare module "sort-by" {
+  import objectPath from "object-path";
 
-// Импортируем типы из object-path, если доступны
-// Если нет — определяем минимально необходимый тип
-declare module "object-path" {
-  export function get(obj: any, path: string): any;
+  /**
+   * Filters arguments based on their type
+   * @param type - Type of property to filter by (e.g., 'string', 'function')
+   * @returns Function that checks if argument is of specified type
+   */
+  const type: <T extends string>(type: T) => (arg: any) => boolean;
+
+  /**
+   * Returns a comparator function for a single property
+   * @param property - The key to sort by (prefix with '-' for descending order)
+   * @param map - Optional function to transform values before comparison
+   * @returns Comparator function for two objects
+   */
+  const sort: {
+    <T>(
+      property: string,
+      map?: (property: string, value: any) => any,
+    ): (a: T, b: T) => number;
+  };
+
+  /**
+   * Returns a comparator function that sorts by multiple keys
+   * Accepts property names (with optional '-' prefix for descending) and optional mapper function
+   * @example
+   * sortBy('age', '-salary')
+   * sortBy('name', (prop, value) => value.toUpperCase())
+   * @returns Comparator function that applies sorting rules in sequence
+   */
+  function sortBy<T = any>(
+    ...args: (
+      | string // property name (use '-' prefix for descending order)
+      | ((property: string, value: any) => any) // value mapper function
+    )[]
+  ): (a: T, b: T) => number;
+
+  // Export as default (compatibility with module.exports = sortBy)
+  export = sortBy;
 }
-
-// Тип для функции-фильтра по типу
-type TypeFilter = (type: string) => (arg: any) => boolean;
-
-// Тип для функции преобразования значения
-type ValueMapper = (property: string, value: any) => any;
-
-// Тип для компаратора — функции сравнения двух объектов
-type Comparator<T> = (a: T, b: T) => number;
-
-// Основной тип для функции sortBy
-type SortByFunction = (...args: (string | ValueMapper)[]) => Comparator<any>;
-
-// Более точная версия с дженериком
-type SortByFunctionGeneric<T> = (
-  ...args: (string | ValueMapper)[]
-) => Comparator<T>;
-
-// Вспомогательные типы для параметров sort
-interface SortOptions {
-  property: string;
-  map?: ValueMapper;
-}
-
-// Экспортируемые типы
-declare const type: TypeFilter;
-declare const sort: (property: string, map?: ValueMapper) => Comparator<any>;
-declare const sortBy: SortByFunction;
-
-// Альтернатива с более строгой типизацией:
-declare namespace SortUtils {
-  const type: TypeFilter;
-  const sort: (property: string, map?: ValueMapper) => Comparator<any>;
-  const sortBy: SortByFunction;
-}
-
-export = SortUtils;
-export as namespace SortUtils;

@@ -1,3 +1,3 @@
-import * as all from "sort-by";
+import sortBy from "sort-by";
 
-all.sort;
+sortBy("asdf");
