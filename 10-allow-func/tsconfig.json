@@ -5,11 +5,13 @@
     "outDir": "./build/",
 
     // Environment Settings
-    "module": "ESNext",
-    "target": "esnext",
+    "module": "commonjs",
+    "target": "es6",
     // "lib": ["ES2022"],
     "types": [],
-
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
     // Other Outputs
     "sourceMap": false,
     "declaration": false,
