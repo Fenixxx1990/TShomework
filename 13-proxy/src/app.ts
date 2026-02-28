@@ -1,37 +1,68 @@
-interface IPaymentAPI {
-  getPaymentDetail(i: number): IPaymentDetail | undefined;
-}
-
-interface IPaymentDetail {
+interface Product {
   id: number;
-  sum: number;
+  title: string;
+  description: string;
+  price: number;
+  // другие поля...
 }
 
-class PaymentAPI implements IPaymentAPI {
-  private data = [{ id: 1, sum: 10000 }];
+class ProductAPI {
+  async getProduct(id: number): Promise<Product> {
+    const response = await fetch(`https://dummyjson.com/products/${id}`);
 
-  getPaymentDetail(i: number): IPaymentDetail | undefined {
-    return this.data.find((d) => d.id === i);
-  }
-}
-
-class PaymentAccessProxy implements IPaymentAPI {
-  constructor(
-    private api: PaymentAPI,
-    private userId: number,
-  ) {}
-
-  getPaymentDetail(i: number): IPaymentDetail | undefined {
-    if (this.userId === 1) {
-      return this.api.getPaymentDetail(i);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    console.log("Попытка получить данные платежа!");
-    return undefined;
+
+    return response.json();
   }
 }
 
-const proxy = new PaymentAccessProxy(new PaymentAPI(), 1);
-console.log(proxy.getPaymentDetail(1));
+class ProductProxy {
+  private api: ProductAPI;
 
-const proxy2 = new PaymentAccessProxy(new PaymentAPI(), 2);
-console.log(proxy2.getPaymentDetail(1));
+  constructor() {
+    this.api = new ProductAPI();
+  }
+
+  async getProduct(id: number): Promise<Product> {
+    // Проверка условия: ID должен быть меньше 10
+    if (id >= 10) {
+      return Promise.reject(new Error("Product ID must be less than 10"));
+    }
+
+    console.log(`Proxy: Forwarding request for product ID ${id} to API...`);
+
+    try {
+      const product = await this.api.getProduct(id);
+      console.log(`Proxy: Successfully retrieved product: ${product.title}`);
+      return product;
+    } catch (error) {
+      console.error(`Proxy: Error fetching product ${id}:`, error);
+      throw error;
+    }
+  }
+}
+
+// Создаём прокси
+const productProxy = new ProductProxy();
+
+// Тест с ID < 10 — должен сработать
+productProxy
+  .getProduct(1)
+  .then((product) => {
+    console.log("Получен продукт:", product);
+  })
+  .catch((error) => {
+    console.error("Ошибка:", error.message);
+  });
+
+// Тест с ID >= 10 — должен вернуть ошибку
+productProxy
+  .getProduct(15)
+  .then((product) => {
+    console.log("Получен продукт:", product);
+  })
+  .catch((error) => {
+    console.error("Ошибка:", error.message); // Выведет: "Product ID must be less than 10"
+  });
