@@ -1,65 +1,133 @@
-enum ImageFormat {
-  Png = "png",
-  Jpeg = "jpeg",
-}
+class RequestBuilder {
+  private method: string = "GET";
+  private url: string = "";
+  private headers: Record<string, string> = {};
+  private body: any = null;
+  private options: RequestInit = {};
 
-interface IResolution {
-  width: number;
-  height: number;
-}
+  // Устанавливает HTTP-метод (GET, POST и т. д.)
+  setMethod(method: string): this {
+    this.method = method.toUpperCase();
+    return this;
+  }
 
-interface IImageConversion extends IResolution {
-  format: ImageFormat;
-}
+  // Устанавливает URL для запроса
+  setUrl(url: string): this {
+    this.url = url;
+    return this;
+  }
 
-class ImageBuilder {
-  private formats: ImageFormat[] = [];
-  private resolution: IResolution[] = [];
+  // Добавляет отдельный заголовок
+  setHeader(name: string, value: string): this {
+    this.headers[name] = value;
+    return this;
+  }
 
-  addPng() {
-    if (this.formats.includes(ImageFormat.Png)) {
-      return this;
+  // Устанавливает несколько заголовков сразу
+  setHeaders(headers: Record<string, string>): this {
+    this.headers = { ...this.headers, ...headers };
+    return this;
+  }
+
+  // Устанавливает тело запроса (автоматически сериализует в JSON для POST/PUT)
+  setBody(body: any): this {
+    this.body = body;
+    return this;
+  }
+
+  // Устанавливает дополнительные опции fetch
+  setOptions(options: RequestInit): this {
+    this.options = options;
+    return this;
+  }
+
+  // Выполняет запрос с использованием fetch API
+  async exec(): Promise<Response> {
+    // Базовая валидация
+    if (!this.url) {
+      throw new Error("URL must be set before executing request");
     }
-    this.formats.push(ImageFormat.Png);
-    return this;
-  }
 
-  addJpeg() {
-    if (this.formats.includes(ImageFormat.Jpeg)) {
-      return this;
+    // Подготавливаем заголовки
+    const requestHeaders: HeadersInit = {
+      ...this.headers,
+    };
+
+    // Для POST/PUT запросов с телом добавляем Content-Type
+    if (this.body && ["POST", "PUT", "PATCH"].includes(this.method)) {
+      requestHeaders["Content-Type"] = "application/json";
     }
-    this.formats.push(ImageFormat.Jpeg);
-    return this;
-  }
 
-  addResolution(width: number, height: number) {
-    this.resolution.push({
-      width,
-      height,
-    });
-    return this;
-  }
+    // Формируем конфигурацию запроса
+    const config: RequestInit = {
+      method: this.method,
+      headers: requestHeaders,
+      ...this.options,
+    };
 
-  build() {
-    const res: IImageConversion[] = [];
-    for (const r of this.resolution) {
-      for (const f of this.formats) {
-        res.push({
-          format: f,
-          width: r.width,
-          height: r.height,
-        });
+    // Добавляем тело, если оно есть и метод это поддерживает
+    if (this.body) {
+      config.body = JSON.stringify(this.body);
+    }
+
+    try {
+      const response = await fetch(this.url, config);
+
+      // Проверяем статус ответа (опционально)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      return response;
+    } catch (error) {
+      console.error("Request failed:", error);
+      throw error;
     }
-    return res;
   }
 }
 
-console.log(
-  new ImageBuilder()
-    .addJpeg()
-    .addPng()
-    .addResolution(100, 50)
-    .addResolution(200, 100)
-    .build(),
-);
+// Пример использования
+(async () => {
+  try {
+    // Пример GET-запроса
+    const getResponse = await new RequestBuilder()
+      .setMethod("GET")
+      .setUrl("https://api.example.com/users")
+      .setHeader("Authorization", "Bearer token123")
+      .setHeader("Accept", "application/json")
+      .exec();
+
+    console.log("GET response:", await getResponse.json());
+
+    // Пример POST-запроса с телом
+    const postResponse = await new RequestBuilder()
+      .setMethod("POST")
+      .setUrl("https://api.example.com/users")
+      .setHeaders({
+        Authorization: "Bearer token123",
+        "Content-Type": "application/json",
+      })
+      .setBody({
+        name: "John Doe",
+        email: "john@example.com",
+      })
+      .exec();
+
+    console.log("POST response:", await postResponse.json());
+
+    // Пример с дополнительными опциями fetch
+    const customResponse = await new RequestBuilder()
+      .setMethod("PUT")
+      .setUrl("https://api.example.com/users/123")
+      .setHeader("Authorization", "Bearer token123")
+      .setBody({ name: "Updated Name" })
+      .setOptions({
+        signal: AbortSignal.timeout(5000), // Таймаут 5 секунд
+      })
+      .exec();
+
+    console.log("Custom response:", await customResponse.json());
+  } catch (error) {
+    console.error("Error:", error);
+  }
+})();
